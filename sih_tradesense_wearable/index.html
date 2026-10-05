@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AeroSentry Industrial — AI Wearable Hazard & Leak Detection</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="relative min-h-screen">
+
+<!-- ─── CONNECTION STATUS BANNER ─────────────────────────────────────────── -->
+<div id="conn-banner" class="offline">⬤ STANDALONE MODE | Simulated Data Active</div>
+
+<!-- ─── HEADER / GLOBAL HUD ──────────────────────────────────────────────── -->
+<header class="sticky top-0 z-50 glass border-b border-slate-800">
+  <div class="max-w-screen-2xl mx-auto px-4 lg:px-8">
+
+    <!-- Top Bar -->
+    <div class="flex items-center justify-between py-3 gap-4">
+
+      <!-- Brand -->
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-cyan-400 to-blue-700 shadow-lg shadow-cyan-500/20">
+          <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"
+              d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-tech text-xl font-bold text-white tracking-wide">AERO<span class="text-cyan-400">SENTRY</span></span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 border border-slate-700 text-slate-400">INDUSTRIAL</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block leading-none mt-0.5">AI-Enabled Diagnostic & Sensing Wearables for Skilled Trades — Hazard Detection Platform</p>
+        </div>
+      </div>
+
+      <!-- Master Status + Controls -->
+      <div class="flex items-center gap-2 flex-wrap justify-end">
+        <span id="master-badge" class="px-3 py-1 rounded-full text-xs font-tech font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">● NORMAL</span>
+
+        <button id="btn-mute" class="px-3 py-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/15 text-xs font-tech text-cyan-300 hover:bg-cyan-500/25 transition">🔊 Alarm ON</button>
+
+        <button id="btn-reset" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-xs font-tech text-slate-300 hover:text-white transition">🔄 Reset All</button>
+
+        <button id="btn-evac" class="px-3 py-1.5 rounded-lg border border-rose-500/80 bg-rose-600/25 text-xs font-tech font-bold text-rose-300 hover:bg-rose-600/45 transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500 relative ping-dot"></span>
+          EMERGENCY SOS
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex gap-1 overflow-x-auto pb-2 scrollbar-none">
+      <button data-tab="telemetry" class="tab-btn tab-active px-3.5 py-1.5 rounded-lg border text-xs font-tech tracking-wide uppercase whitespace-nowrap transition">
+        📡 Live Telemetry
+      </button>
+      <button data-tab="simulator" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 text-xs font-tech tracking-wide uppercase whitespace-nowrap transition">
+        ⚡ Hazard Simulator
+      </button>
+      <button data-tab="labs" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 text-xs font-tech tracking-wide uppercase whitespace-nowrap transition">
+        🔬 Acoustic & Thermal Lab
+      </button>
+      <button data-tab="copilot" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 text-xs font-tech tracking-wide uppercase whitespace-nowrap transition">
+        💬 Safety Copilot
+      </button>
+      <button data-tab="supervisor" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 text-xs font-tech tracking-wide uppercase whitespace-nowrap transition">
+        🏢 Supervisor Command
+      </button>
+      <button data-tab="hardware" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 text-xs font-tech tracking-wide uppercase whitespace-nowrap transition">
+        🔩 Hardware & BOM
+      </button>
+      <button data-tab="impact" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 text-xs font-tech tracking-wide uppercase whitespace-nowrap transition">
+        📊 Safety Impact
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- ─── EVACUATION ALERT BANNER ───────────────────────────────────────────── -->
+<div id="evac-banner" class="hidden fixed top-[76px] left-0 right-0 z-40 mx-4 mt-2">
+  <div class="max-w-screen-2xl mx-auto">
+    <div class="p-3 rounded-xl bg-rose-900/90 border border-rose-500 hazard-pulse flex items-center justify-between gap-4 backdrop-blur">
+      <div class="flex items-center gap-3">
+        <span class="text-xl">🚨</span>
+        <div>
+          <h4 class="font-tech font-bold text-white">SITE-WIDE EMERGENCY EVACUATION ACTIVE</h4>
+          <p class="text-xs text-rose-200">All wearable pods vibrating continuously. Proceed to Assembly Point A immediately.</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('evac-banner').classList.add('hidden')" class="text-rose-300 hover:text-white text-lg font-mono px-3">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MAIN CONTENT ───────────────────────────────────────────────────────── -->
+<main class="max-w-screen-2xl mx-auto px-4 lg:px-8 py-5 relative z-10">
+
+<!-- ════════════════════════════════════════════════════════════════
+  TAB 1: LIVE TELEMETRY & DIGITAL TWIN
+══════════════════════════════════════════════════════════════════ -->
+<section data-section="telemetry">
+
+  <!-- Worker Selector Chips -->
+  <div class="mb-4">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="font-tech text-sm font-bold text-slate-300 uppercase tracking-wider">Select Field Technician — Live Wearable View</h2>
+      <span class="text-[11px] font-mono text-slate-500">Tap a card to inspect live telemetry</span>
+    </div>
+    <div id="worker-chips" class="grid grid-cols-2 lg:grid-cols-4 gap-2"></div>
+  </div>
+
+  <!-- Active Worker Wearable Panel -->
+  <div class="glass rounded-2xl p-5 mb-5 border border-slate-800">
+    <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <!-- Wearable Digital Twin SVG -->
+        <div class="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-slate-900 to-cyan-950/50 border border-cyan-500/35 flex items-center justify-center shadow-inner">
+          <svg viewBox="0 0 100 100" class="w-18 h-18">
+            <rect x="26" y="11" width="48" height="78" rx="13" fill="#0d1a2b" stroke="#00f2fe" stroke-width="2.5"/>
+            <rect x="34" y="24" width="32" height="26" rx="4" fill="#070d16" stroke="#38bdf8" stroke-width="1.2"/>
+            <circle cx="50" cy="37" r="7" fill="none" stroke="#00f59b" stroke-width="1.8" class="animate-pulse"/>
+            <rect x="32" y="56" width="36" height="2" rx="1" fill="#1e3a52"/>
+            <circle cx="40" cy="68" r="3.5" fill="#ffb703"/>
+            <circle cx="50" cy="68" r="3.5" fill="#00f59b"/>
+            <circle cx="60" cy="68" r="3.5" fill="#ff3366"/>
+            <path d="M32 11 L32 3 L68 3 L68 11" fill="#14253c" stroke="#1e3a52" stroke-width="1"/>
+            <path d="M32 89 L32 97 L68 97 L68 89" fill="#14253c" stroke="#1e3a52" stroke-width="1"/>
+          </svg>
+          <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-slate-950"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 id="active-worker-name" class="font-tech text-lg font-bold text-white">Rahul Sharma</h3>
+            <span id="pod-status-badge" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">NORMAL</span>
+          </div>
+          <p id="active-worker-trade" class="text-sm text-slate-400 mt-0.5">Industrial Pipefitter</p>
+          <p id="active-worker-zone" class="text-[12px] text-cyan-400/80 font-mono mt-0.5">📍 Zone B – High-Pressure Steam Gallery</p>
+          <div class="flex gap-4 text-[11px] font-mono text-slate-500 mt-1.5">
+            <span id="val-rssi">RSSI: -72 dBm</span>
+            <span id="val-motion">Motion: ACTIVE</span>
+            <span>LoRaWAN 865–867 MHz</span>
+            <span id="haptic-indicator" class="text-emerald-400 font-bold">HAPTIC: STANDBY</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="document.querySelector('[data-tab=simulator]').click()" class="px-4 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-xs font-tech font-bold transition">⚡ Open Simulator</button>
+        <button onclick="document.querySelector('[data-tab=copilot]').click()" class="px-4 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/40 text-indigo-300 text-xs font-tech font-bold transition">💬 Safety Copilot</button>
+        <button id="btn-audit" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-tech font-bold transition">📄 Audit Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 Sensor Metric Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-5">
+    <div class="glass-card p-3 rounded-xl">
+      <div class="text-[10px] font-tech text-slate-400 uppercase mb-1">Methane CH₄</div>
+      <div id="val-ch4" class="metric-value sev-normal">12.0 PPM</div>
+      <div class="text-[9px] text-slate-600 mt-0.5">LEL 50,000 PPM</div>
+    </div>
+    <div class="glass-card p-3 rounded-xl">
+      <div class="text-[10px] font-tech text-slate-400 uppercase mb-1">Carbon Monoxide</div>
+      <div id="val-co" class="metric-value sev-normal">8.0 PPM</div>
+      <div class="text-[9px] text-slate-600 mt-0.5">OSHA PEL 50 PPM</div>
+    </div>
+    <div class="glass-card p-3 rounded-xl">
+      <div class="text-[10px] font-tech text-slate-400 uppercase mb-1">H₂S Sewer Gas</div>
+      <div id="val-h2s" class="metric-value sev-normal">0.80 PPM</div>
+      <div class="text-[9px] text-slate-600 mt-0.5">Toxic Limit 10 PPM</div>
+    </div>
+    <div class="glass-card p-3 rounded-xl">
+      <div class="text-[10px] font-tech text-slate-400 uppercase mb-1">Oxygen O₂</div>
+      <div id="val-o2" class="metric-value sev-normal">20.9 %</div>
+      <div class="text-[9px] text-slate-600 mt-0.5">Hypoxia &lt;19.5%</div>
+    </div>
+    <div class="glass-card p-3 rounded-xl">
+      <div class="text-[10px] font-tech text-slate-400 uppercase mb-1">Halocarbon MOS</div>
+      <div id="val-ref" class="metric-value sev-normal">5 PPM</div>
+      <div class="text-[9px] text-slate-600 mt-0.5">R-410A / R-32</div>
+    </div>
+    <div class="glass-card p-3 rounded-xl">
+      <div class="text-[10px] font-tech text-slate-400 uppercase mb-1">Ultrasonic Noise</div>
+      <div id="val-acoustic-db" class="metric-value sev-normal">22.0 dB</div>
+      <div id="val-acoustic-freq" class="text-[9px] text-cyan-400 font-mono mt-0.5">24.2 kHz</div>
+    </div>
+    <div class="glass-card p-3 rounded-xl">
+      <div class="text-[10px] font-tech text-slate-400 uppercase mb-1">IR Thermal Spot</div>
+      <div id="val-thermal-spot" class="metric-value sev-normal">28.1°C</div>
+      <div id="val-thermal-amb" class="text-[9px] text-slate-600 mt-0.5">Amb: 24.5°C</div>
+    </div>
+    <div class="glass-card p-3 rounded-xl">
+      <div class="text-[10px] font-tech text-slate-400 uppercase mb-1">Worker Vitals</div>
+      <div id="val-heartrate" class="metric-value sev-normal">76 BPM</div>
+      <div id="val-battery" class="text-[9px] text-emerald-400 font-mono mt-0.5">🔋 94%</div>
+    </div>
+  </div>
+
+  <!-- Leak Acoustic status bar -->
+  <div class="glass-card p-3 rounded-xl mb-5 flex items-center justify-between gap-3">
+    <span class="text-xs font-tech text-slate-400 uppercase tracking-wider">Acoustic Leak AI Status</span>
+    <div id="val-leak-status" class="metric-value sev-normal">NONE DETECTED</div>
+  </div>
+
+  <!-- Live Charts -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="glass p-4 rounded-2xl border border-slate-800">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-tech text-sm font-bold text-white flex gap-2 items-center"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Multi-Gas Trend (PPM)</h3>
+        <span class="text-[10px] font-mono text-slate-500">NDIR + Electrochemical Array</span>
+      </div>
+      <div class="h-44"><canvas id="gas-chart"></canvas></div>
+    </div>
+    <div class="glass p-4 rounded-2xl border border-slate-800">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-tech text-sm font-bold text-white flex gap-2 items-center"><span class="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span>Ultrasonic Noise (20–60 kHz)</h3>
+        <span class="text-[10px] font-mono text-slate-500">MEMS Acoustic Hiss Sensor</span>
+      </div>
+      <div class="h-44"><canvas id="acoustic-chart"></canvas></div>
+    </div>
+    <div class="glass p-4 rounded-2xl border border-slate-800">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-tech text-sm font-bold text-white flex gap-2 items-center"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>Technician Heart Rate (BPM)</h3>
+        <span class="text-[10px] font-mono text-slate-500">PPG Optical Pulse Sensor</span>
+      </div>
+      <div class="h-44"><canvas id="vitals-chart"></canvas></div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+  TAB 2: HAZARD & LEAK SIMULATOR
+══════════════════════════════════════════════════════════════════ -->
+<section data-section="simulator" class="hidden space-y-5">
+
+  <!-- Scenario Trigger Cards -->
+  <div class="glass p-5 rounded-2xl border border-slate-800">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+      <div>
+        <h2 class="font-tech text-xl font-bold text-white">Field Hazard Diagnostic Testbed</h2>
+        <p class="text-xs text-slate-400 mt-1">Inject real-world industrial scenarios to evaluate edge AI inference, sensor response, and safety protocol execution in real time.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+      <button id="btn-steam" class="group p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-cyan-500/50 hover:bg-cyan-950/15 text-left transition">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-mono text-cyan-400">Pipefitter Trade</span>
+          <span class="w-2 h-2 rounded-full bg-cyan-400 opacity-0 group-hover:opacity-100 group-hover:animate-ping"></span>
+        </div>
+        <h4 class="font-tech font-bold text-white">💨 Steam Pipe Pinhole</h4>
+        <p class="text-[11px] text-slate-400 mt-1.5">39.5 kHz ultrasonic hiss + localized thermal flare >88°C</p>
+        <div class="mt-3 text-[11px] font-mono text-cyan-400">▶ Trigger on WRK-01 →</div>
+      </button>
+
+      <button id="btn-gas" class="group p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-rose-500/50 hover:bg-rose-950/15 text-left transition">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-mono text-rose-400">Sanitation Trade</span>
+          <span class="w-2 h-2 rounded-full bg-rose-500 opacity-0 group-hover:opacity-100 group-hover:animate-ping"></span>
+        </div>
+        <h4 class="font-tech font-bold text-white">☣️ Confined Space H₂S</h4>
+        <p class="text-[11px] text-slate-400 mt-1.5">H₂S >40 ppm, Methane >1800 ppm, O₂ below 18% — asphyxiation risk</p>
+        <div class="mt-3 text-[11px] font-mono text-rose-400">▶ Trigger on WRK-03 →</div>
+      </button>
+
+      <button id="btn-hvac" class="group p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-amber-400/50 hover:bg-amber-950/15 text-left transition">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-mono text-amber-400">HVAC-R Trade</span>
+          <span class="w-2 h-2 rounded-full bg-amber-400 opacity-0 group-hover:opacity-100 group-hover:animate-ping"></span>
+        </div>
+        <h4 class="font-tech font-bold text-white">❄️ Chiller Refrigerant Flare</h4>
+        <p class="text-[11px] text-slate-400 mt-1.5">R-410A vapour >770 ppm + acoustic resonance at 32.8 kHz</p>
+        <div class="mt-3 text-[11px] font-mono text-amber-400">▶ Trigger on WRK-02 →</div>
+      </button>
+
+      <button id="btn-arc" class="group p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-purple-500/50 hover:bg-purple-950/15 text-left transition">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-mono text-purple-400">Electrician Trade</span>
+          <span class="w-2 h-2 rounded-full bg-purple-400 opacity-0 group-hover:opacity-100 group-hover:animate-ping"></span>
+        </div>
+        <h4 class="font-tech font-bold text-white">⚡ Switchgear Arcing</h4>
+        <p class="text-[11px] text-slate-400 mt-1.5">Corona discharge 48.2 kHz + IR thermal overload >110°C</p>
+        <div class="mt-3 text-[11px] font-mono text-purple-400">▶ Trigger on WRK-04 →</div>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Active Hazard Alert Panel -->
+  <div id="hazard-banner" class="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/15 transition-all duration-300">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span id="hazard-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-tech font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">NOMINAL</span>
+          <h3 id="hazard-title" class="font-tech text-base font-bold text-white">All Systems Nominal — Continuous Background Monitoring Active</h3>
+        </div>
+        <p id="hazard-desc" class="text-xs text-slate-400">All atmospheric, ultrasonic, and thermal parameters are within safe operational limits. Edge inference running at 8.4ms cycle time.</p>
+        <div id="triggered-sensors" class="flex flex-wrap gap-1.5 mt-2">
+          <span class="text-xs text-emerald-400 font-mono">✓ All sensor channels within safe operational thresholds</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edge AI + SOP Split -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- TinyML Inference Panel -->
+    <div class="glass p-5 rounded-2xl border border-slate-800 space-y-3">
+      <div class="border-b border-slate-800 pb-3">
+        <h3 class="font-tech text-base font-bold text-white flex items-center gap-2">🧠 Edge AI / TinyML On-Device Inference</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Quantized Int8 model executing on ESP32-S3 Dual-Core Xtensa LX7 with Vector AI acceleration</p>
+      </div>
+
+      <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+        <span class="text-xs text-slate-400">Active Model Architecture</span>
+        <span id="tinyml-model" class="text-xs font-mono text-cyan-300 font-bold">Quiescent-MultiSensor-v1</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span class="text-[11px] text-slate-400">Inference Latency</span>
+          <div id="tinyml-latency" class="text-sm font-mono font-bold text-emerald-400 mt-0.5">8.4ms</div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+          <span class="text-[11px] text-slate-400">SRAM Footprint</span>
+          <div id="tinyml-ram" class="text-sm font-mono font-bold text-slate-200 mt-0.5">46 KB / 512 KB</div>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+        <div class="flex justify-between mb-2">
+          <span class="text-xs text-slate-400">Hazard Classification Confidence</span>
+          <span id="tinyml-confidence" class="text-xs font-mono font-bold text-cyan-400">2.8%</span>
+        </div>
+        <div class="w-full h-2.5 rounded-full bg-slate-800">
+          <div id="tinyml-conf-bar" class="conf-bar-fill" style="width: 2.8%"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-2.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
+          <div class="text-[11px] text-slate-400">Flash Usage</div>
+          <div class="text-sm font-mono font-bold text-slate-200 mt-0.5">188 KB (Int8 QAT)</div>
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
+          <div class="text-[11px] text-slate-400">MCU Clock</div>
+          <div class="text-sm font-mono font-bold text-slate-200 mt-0.5">240 MHz (LX7)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OSHA Standard Operating Procedures -->
+    <div class="glass p-5 rounded-2xl border border-slate-800">
+      <div class="border-b border-slate-800 pb-3 mb-3 flex items-center justify-between">
+        <div>
+          <h3 class="font-tech text-base font-bold text-white flex items-center gap-2">🛡️ Industrial Safety SOP Protocol</h3>
+          <p class="text-xs text-slate-400 mt-0.5">OSHA 29 CFR 1910, DGMS, ISO 45001 Aligned Directives</p>
+        </div>
+        <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950 text-amber-300 border border-amber-500/40">FIELD OPERATIVE</span>
+      </div>
+      <ul id="sop-list" class="space-y-2"></ul>
+    </div>
+
+  </div>
+
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+  TAB 3: ACOUSTIC & THERMAL LAB
+══════════════════════════════════════════════════════════════════ -->
+<section data-section="labs" class="hidden space-y-5">
+
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+    <div>
+      <h2 class="font-tech text-xl font-bold text-white">Acoustic & Thermal Diagnostic Laboratory</h2>
+      <p class="text-xs text-slate-400 mt-1">Ultrasonic MEMS microphone (20–60 kHz) and non-contact IR thermopile array enable leak detection before visible pipe failure or thermal runaway.</p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="window.simulator.initAudio(); window.simulator.trigger('WRK-01','STEAM_PINHOLE').then(()=>{})" class="px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-xs font-tech font-bold hover:bg-cyan-500/25 transition">Simulate Pinhole (39.5 kHz)</button>
+      <button onclick="window.simulator.initAudio(); window.simulator.trigger('WRK-04','ELECTRICAL_ARC').then(()=>{})" class="px-3 py-1.5 rounded-lg bg-purple-500/15 border border-purple-500/40 text-purple-300 text-xs font-tech font-bold hover:bg-purple-500/25 transition">Simulate Arc Thermal</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Ultrasonic Spectrogram -->
+    <div class="glass p-4 rounded-2xl border border-slate-800 space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <h4 class="font-tech text-sm font-bold text-cyan-400">Ultrasonic FFT Spectrogram — Waterfall</h4>
+          <p class="text-[11px] text-slate-400">Real-time energy distribution 20 kHz to 60 kHz</p>
+        </div>
+        <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 border border-cyan-500/30 text-cyan-400">MEMS I2S</span>
+      </div>
+      <div class="scanlines rounded-xl overflow-hidden border border-slate-800 bg-[#060a10]">
+        <canvas id="spectrogram-canvas" class="w-full block" style="height:170px"></canvas>
+      </div>
+      <div>
+        <p class="text-[10px] font-mono text-slate-500 mb-1">Instantaneous FFT Frequency Energy Bars</p>
+        <div class="scanlines rounded-xl overflow-hidden border border-slate-800 bg-[#0a0f1a]">
+          <canvas id="fft-bars-canvas" class="w-full block" style="height:72px"></canvas>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-400 leading-relaxed">
+        <strong class="text-slate-300">Science:</strong> High-pressure fluid escaping through microscopic pinholes creates broadband turbulent hissing. At frequencies above 20 kHz (inaudible to humans) this resonance is highly directional — the MEMS wrist sensor isolates leak location without touching the pipe.
+      </p>
+    </div>
+
+    <!-- Thermal IR Heatmap -->
+    <div class="glass p-4 rounded-2xl border border-slate-800 space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <h4 class="font-tech text-sm font-bold text-orange-400">Non-Contact Thermal IR Matrix</h4>
+          <p class="text-[11px] text-slate-400">12×12 bilinear interpolated thermopile array · Ironbow palette</p>
+        </div>
+        <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-orange-950 border border-orange-500/30 text-orange-400">AMG8833</span>
+      </div>
+      <div class="rounded-xl overflow-hidden border border-slate-800 bg-[#060a10] flex justify-center p-2">
+        <canvas id="thermal-canvas" width="360" height="260" class="rounded-lg max-w-full"></canvas>
+      </div>
+      <div>
+        <p class="text-[10px] font-mono text-slate-500 mb-1.5">Temperature Colorbar — Ironbow False-Color Scale</p>
+        <div class="thermal-legend w-full"></div>
+        <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
+          <span>20°C (Ambient)</span><span>50°C (Warm)</span><span>85°C (Warning)</span><span>115°C (Critical)</span>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-400 leading-relaxed">
+        <strong class="text-slate-300">Safety Critical:</strong> Superheated steam jets and electrical hot-spots are often invisible to the human eye. The IR matrix detects surface temperature anomalies from 2–3 m away, before thermal runaway or pipe burst occurs.
+      </p>
+    </div>
+
+  </div>
+
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+  TAB 4: AI SAFETY COPILOT
+══════════════════════════════════════════════════════════════════ -->
+<section data-section="copilot" class="hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Chat Panel -->
+    <div class="lg:col-span-2 glass p-5 rounded-2xl border border-slate-800 flex flex-col" style="height:620px">
+      <div class="border-b border-slate-800 pb-3 mb-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 flex items-center justify-center font-tech font-bold text-sm">AI</div>
+          <div>
+            <h3 class="font-tech font-bold text-white text-sm">Industrial Safety Copilot</h3>
+            <p class="text-[11px] text-slate-400">OSHA 29 CFR 1910 · DGMS · ISO 45001 · Gas Detection Standards</p>
+          </div>
+        </div>
+        <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 border border-cyan-500/30 text-cyan-400">API Connected</span>
+      </div>
+
+      <!-- Quick Chip Prompts -->
+      <div class="flex flex-wrap gap-1.5 mb-3">
+        <button class="copilot-chip px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-slate-300 transition" data-query="How do I safely locate a high-pressure steam pipe pinhole leak?">💨 Steam Pipe Protocol</button>
+        <button class="copilot-chip px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-slate-300 transition" data-query="What to do if H2S gas alarm triggers in a sewer trench?">☣️ H₂S Trench Alarm</button>
+        <button class="copilot-chip px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-slate-300 transition" data-query="How to detect refrigerant leak in HVAC chiller room?">❄️ HVAC Refrigerant Leak</button>
+        <button class="copilot-chip px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-slate-300 transition" data-query="Explain arc flash safety boundary for industrial switchgear work.">⚡ Arc Flash LOTO</button>
+      </div>
+
+      <!-- Messages -->
+      <div id="copilot-messages" class="flex-1 overflow-y-auto space-y-3 pr-1">
+        <div class="flex justify-start">
+          <div class="max-w-[90%] rounded-2xl rounded-tl-none bg-slate-800/90 border border-slate-700 p-3.5">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 flex items-center justify-center text-[9px] font-bold">AI</span>
+              <span class="font-tech font-bold text-[11px] text-cyan-400">Industrial Safety Copilot</span>
+            </div>
+            <p class="text-[13px] text-slate-300 leading-relaxed">Welcome. I provide on-demand industrial safety guidance for plumbers, pipefitters, HVAC-R technicians, electricians, and sanitation operatives. Ask me about gas hazard thresholds, acoustic leak detection, confined space protocols, arc flash boundaries, or how to interpret your wearable sensor readings.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <form id="copilot-form" class="mt-3 pt-3 border-t border-slate-800 flex gap-2">
+        <input id="copilot-input" type="text" placeholder="Ask about gas thresholds, leak detection, LOTO, or wearable sensor readings…"
+          class="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-2.5 text-[13px] text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
+        <button type="submit" class="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-tech font-bold text-xs transition flex items-center gap-1.5">
+          Send <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- Pre-Shift Safety Checklist -->
+    <div class="glass p-5 rounded-2xl border border-slate-800 flex flex-col">
+      <div class="border-b border-slate-800 pb-3 mb-4">
+        <h3 class="font-tech font-bold text-white text-sm flex items-center gap-2">📋 Daily Pre-Shift Safety Checklist</h3>
+        <p class="text-[11px] text-slate-400 mt-0.5">Mandatory wearable and PPE verification before site entry</p>
+      </div>
+
+      <div class="space-y-2.5 flex-1">
+        <label class="flex gap-3 items-start p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+          <input type="checkbox" checked class="mt-0.5 accent-cyan-400">
+          <div><div class="text-xs font-medium text-slate-200">Sensor Zero-Calibration</div><p class="text-[10px] text-slate-500">NDIR gas array exposed to fresh air (30 sec).</p></div>
+        </label>
+        <label class="flex gap-3 items-start p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+          <input type="checkbox" checked class="mt-0.5 accent-cyan-400">
+          <div><div class="text-xs font-medium text-slate-200">Haptic & Buzzer Self-Test</div><p class="text-[10px] text-slate-500">Triple-pulse vibration + 85 dB piezo verified.</p></div>
+        </label>
+        <label class="flex gap-3 items-start p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+          <input type="checkbox" checked class="mt-0.5 accent-cyan-400">
+          <div><div class="text-xs font-medium text-slate-200">PPE Inspection</div><p class="text-[10px] text-slate-500">Arc-rated visor, non-conductive boots, nitrile gloves.</p></div>
+        </label>
+        <label class="flex gap-3 items-start p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+          <input type="checkbox" class="mt-0.5 accent-cyan-400">
+          <div><div class="text-xs font-medium text-slate-200">LoRaWAN Gateway Sync</div><p class="text-[10px] text-slate-500">RSSI &lt;-90 dBm — confirm signal before entry.</p></div>
+        </label>
+        <label class="flex gap-3 items-start p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+          <input type="checkbox" class="mt-0.5 accent-cyan-400">
+          <div><div class="text-xs font-medium text-slate-200">Confined Space Entry Permit</div><p class="text-[10px] text-slate-500">Supervisor approval required before trench entry.</p></div>
+        </label>
+        <label class="flex gap-3 items-start p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+          <input type="checkbox" class="mt-0.5 accent-cyan-400">
+          <div><div class="text-xs font-medium text-slate-200">Emergency Rescue Plan</div><p class="text-[10px] text-slate-500">Non-entry rescue tripod in position at trench mouth.</p></div>
+        </label>
+      </div>
+
+      <button onclick="alert('Pre-shift safety checklist signed and timestamped to compliance audit log.')" class="mt-4 w-full py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-xs font-tech font-bold transition">
+        ✓ Sign & Log Pre-Shift Checklist
+      </button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+  TAB 5: SUPERVISOR COMMAND
+══════════════════════════════════════════════════════════════════ -->
+<section data-section="supervisor" class="hidden space-y-5">
+
+  <div class="glass p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div>
+      <h2 class="font-tech text-xl font-bold text-white">Supervisor Command Centre</h2>
+      <p class="text-xs text-slate-400 mt-1">Centralised field technician monitoring, emergency dispatch, and OSHA/DGMS compliance incident management.</p>
+    </div>
+    <div class="flex gap-2">
+      <button id="btn-evac-super" onclick="document.getElementById('btn-evac').click()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-tech font-bold text-xs transition flex items-center gap-2 shadow-lg shadow-rose-900/50">
+        <span class="w-2 h-2 rounded-full bg-white relative ping-dot"></span>🚨 Emergency Evacuation SOS
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Plant Floorplan Map -->
+    <div class="lg:col-span-2 glass p-5 rounded-2xl border border-slate-800">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-tech text-sm font-bold text-white">Industrial Facility Floorplan — Live Worker Positions</h3>
+        <span class="text-[11px] font-mono text-cyan-400">LoRaWAN Sub-GHz Mesh Triangulation</span>
+      </div>
+      <div id="supervisor-map" class="relative w-full rounded-xl border border-slate-800 bg-[#060b13] overflow-hidden" style="height:360px">
+        <!-- Zone SVG Overlay -->
+        <svg class="absolute inset-0 w-full h-full opacity-25 pointer-events-none">
+          <defs><pattern id="bg-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0L0 0 0 40" fill="none" stroke="#334155" stroke-width="0.8"/></pattern></defs>
+          <rect width="100%" height="100%" fill="url(#bg-grid)"/>
+          <rect x="5%" y="10%" width="34%" height="34%" fill="none" stroke="#00f2fe" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text x="7%" y="18%" fill="#00f2fe" font-size="12" font-family="Chakra Petch">ZONE B: STEAM GALLERY</text>
+          <rect x="55%" y="10%" width="38%" height="34%" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text x="57%" y="18%" fill="#38bdf8" font-size="12" font-family="Chakra Petch">ZONE C: CHILLER ROOF</text>
+          <rect x="5%" y="55%" width="34%" height="37%" fill="none" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text x="7%" y="63%" fill="#f43f5e" font-size="12" font-family="Chakra Petch">ZONE D: CONFINED TRENCH</text>
+          <rect x="55%" y="55%" width="38%" height="37%" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text x="57%" y="63%" fill="#fbbf24" font-size="12" font-family="Chakra Petch">ZONE A: 11kV SUBSTATION</text>
+        </svg>
+      </div>
+      <div class="flex items-center gap-5 mt-2 text-[11px] font-mono text-slate-500">
+        <span><span class="text-emerald-400">●</span> Normal</span>
+        <span><span class="text-amber-400">●</span> Advisory</span>
+        <span><span class="text-rose-400">●</span> Critical Hazard (Blinking)</span>
+        <span>Hover pin for live vitals</span>
+      </div>
+    </div>
+
+    <!-- Worker Cards -->
+    <div class="glass p-5 rounded-2xl border border-slate-800 flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <h3 class="font-tech text-sm font-bold text-white">Field Crew Status</h3>
+        <span class="text-xs font-mono text-emerald-400">4 Workers Online</span>
+      </div>
+      <div id="supervisor-worker-list" class="space-y-2 flex-1 overflow-y-auto pr-1"></div>
+    </div>
+
+  </div>
+
+  <!-- OSHA Incident Audit Log -->
+  <div class="glass p-5 rounded-2xl border border-slate-800">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+      <div>
+        <h3 class="font-tech text-base font-bold text-white flex items-center gap-2">
+          📋 OSHA / DGMS Compliance Incident Audit Trail
+          <span id="incident-count" class="w-5 h-5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center justify-center text-[10px] font-bold">0</span>
+        </h3>
+        <p class="text-xs text-slate-400 mt-0.5">Immutable automated hazard log with timestamps for regulatory compliance</p>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="text-slate-400 font-tech uppercase text-[10px] tracking-wider">
+          <tr>
+            <th class="py-2 px-3">Incident ID</th>
+            <th class="py-2 px-3">Time</th>
+            <th class="py-2 px-3">Technician</th>
+            <th class="py-2 px-3">Hazard Type</th>
+            <th class="py-2 px-3">Severity</th>
+            <th class="py-2 px-3">Action Recorded</th>
+          </tr>
+        </thead>
+        <tbody id="incident-table-body">
+          <tr><td colspan="6" class="text-center py-6 text-slate-500 font-mono">No incidents recorded</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+  TAB 6: HARDWARE & BOM
+══════════════════════════════════════════════════════════════════ -->
+<section data-section="hardware" class="hidden space-y-5">
+
+  <div class="glass p-6 rounded-2xl border border-slate-800">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <div>
+        <h2 class="font-tech text-xl font-bold text-white">Wearable Hardware Architecture & Bill of Materials</h2>
+        <p class="text-xs text-slate-400 mt-1">Designed for low-cost, locally sourced manufacturing and mass deployment across skilled trade apprenticeships.</p>
+      </div>
+      <span class="px-3 py-1 rounded-full text-xs font-tech font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">Target BOM: ₹3,180 / ~$38 USD</span>
+    </div>
+
+    <!-- Module Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="glass-card p-4 rounded-xl">
+        <div class="text-xs font-mono text-cyan-400 mb-1">Edge AI Core</div>
+        <h4 class="font-tech font-bold text-white">ESP32-S3 Dual-Core</h4>
+        <p class="text-xs text-slate-400 mt-1 leading-relaxed">240 MHz Xtensa LX7 with AI Vector Acceleration. 512 KB SRAM, 8 MB Flash. Runs TensorFlow Lite for Microcontrollers (TFLM).</p>
+        <div class="text-xs font-mono text-slate-300 mt-2">₹380 / unit</div>
+      </div>
+      <div class="glass-card p-4 rounded-xl">
+        <div class="text-xs font-mono text-emerald-400 mb-1">Acoustic Sensing</div>
+        <h4 class="font-tech font-bold text-white">MEMS Ultrasonic Mic</h4>
+        <p class="text-xs text-slate-400 mt-1 leading-relaxed">Knowles SPH0641LU4H-1. Ultrasonic response from 10 kHz to 65 kHz. Digital PDM/I2S output. SNR 64 dB. Direct DMA streaming.</p>
+        <div class="text-xs font-mono text-slate-300 mt-2">₹240 / unit</div>
+      </div>
+      <div class="glass-card p-4 rounded-xl">
+        <div class="text-xs font-mono text-amber-400 mb-1">Multi-Gas Suite</div>
+        <h4 class="font-tech font-bold text-white">Electrochemical Array</h4>
+        <p class="text-xs text-slate-400 mt-1 leading-relaxed">NDIR + MOS hybrid array for CH₄, CO, H₂S, O₂, and halocarbon refrigerant detection with temperature compensation.</p>
+        <div class="text-xs font-mono text-slate-300 mt-2">₹980 / unit</div>
+      </div>
+      <div class="glass-card p-4 rounded-xl">
+        <div class="text-xs font-mono text-purple-400 mb-1">Thermal & Motion</div>
+        <h4 class="font-tech font-bold text-white">IR Matrix + IMU</h4>
+        <p class="text-xs text-slate-400 mt-1 leading-relaxed">Panasonic AMG8833 8×8 IR thermopile + MPU-6050 6-DoF IMU. Man-down fall detection with 15° tilt threshold trigger.</p>
+        <div class="text-xs font-mono text-slate-300 mt-2">₹620 / unit</div>
+      </div>
+    </div>
+
+    <!-- BOM Table -->
+    <h3 class="font-tech text-base font-bold text-white mb-3">Complete Bill of Materials</h3>
+    <div class="overflow-x-auto rounded-xl border border-slate-800">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-900/80 text-slate-400 font-tech uppercase text-[10px] tracking-wider">
+          <tr>
+            <th class="py-2.5 px-4">Component</th>
+            <th class="py-2.5 px-4">Part / Model</th>
+            <th class="py-2.5 px-4">Key Specification</th>
+            <th class="py-2.5 px-4 text-center">Qty</th>
+            <th class="py-2.5 px-4">Unit Cost (INR)</th>
+            <th class="py-2.5 px-4">Availability</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800 text-slate-300">
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">Edge AI Compute</td><td class="font-mono text-cyan-400">ESP32-S3-WROOM-1</td><td>Dual-Core 240MHz, 512KB SRAM, BLE 5.0</td><td class="text-center">1</td><td class="font-mono font-bold">₹380</td><td class="text-emerald-400">Locally Available</td></tr>
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">Ultrasonic MEMS Mic</td><td class="font-mono text-cyan-400">SPH0641LU4H-1</td><td>10–65 kHz bandwidth, SNR 64 dB, I2S</td><td class="text-center">1</td><td class="font-mono font-bold">₹240</td><td class="text-emerald-400">Locally Available</td></tr>
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">IR Thermal Array</td><td class="font-mono text-cyan-400">AMG8833 Grid-EYE</td><td>8×8 thermopile, −20°C to 100°C, I2C, 10Hz</td><td class="text-center">1</td><td class="font-mono font-bold">₹520</td><td class="text-emerald-400">Locally Available</td></tr>
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">Electrochemical Gas Array</td><td class="font-mono text-cyan-400">Winsen ZE03 + MQ</td><td>H₂S, CO, CH₄, R-410A compact sensor</td><td class="text-center">1</td><td class="font-mono font-bold">₹980</td><td class="text-emerald-400">Locally Available</td></tr>
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">6-Axis IMU (Man-Down)</td><td class="font-mono text-cyan-400">MPU-6050</td><td>Fall & tilt detection, I2C, 3-axis accel/gyro</td><td class="text-center">1</td><td class="font-mono font-bold">₹140</td><td class="text-emerald-400">Locally Available</td></tr>
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">Long-Range Wireless</td><td class="font-mono text-cyan-400">SX1262 LoRa</td><td>865–867 MHz India band, up to 3 km</td><td class="text-center">1</td><td class="font-mono font-bold">₹320</td><td class="text-emerald-400">Locally Available</td></tr>
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">Haptic Motor + Buzzer</td><td class="font-mono text-cyan-400">ERM 1027 + Piezo</td><td>Tactile alert for noisy plant environments</td><td class="text-center">1</td><td class="font-mono font-bold">₹80</td><td class="text-emerald-400">Locally Available</td></tr>
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">Battery & Power Management</td><td class="font-mono text-cyan-400">1200mAh LiPo + TP4056</td><td>16h runtime, USB-C charging, over-discharge protection</td><td class="text-center">1</td><td class="font-mono font-bold">₹260</td><td class="text-emerald-400">Locally Available</td></tr>
+          <tr class="hover:bg-slate-800/20"><td class="py-2.5 px-4 text-white font-medium">IP67 Rugged Enclosure</td><td class="font-mono text-cyan-400">Polycarbonate/Silicone</td><td>Drop-proof, oil-resistant, wrist-mount strap</td><td class="text-center">1</td><td class="font-mono font-bold">₹260</td><td class="text-emerald-400">Locally Moulded</td></tr>
+        </tbody>
+        <tfoot class="bg-slate-900/80 font-tech font-bold text-white text-sm">
+          <tr>
+            <td colspan="4" class="py-3 px-4 text-right uppercase text-sm">Total Unit BOM:</td>
+            <td class="py-3 px-4 text-cyan-400 font-mono">₹3,180 (~$38)</td>
+            <td class="py-3 px-4 text-emerald-400 text-xs">100% Scalable</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+  TAB 7: SAFETY IMPACT
+══════════════════════════════════════════════════════════════════ -->
+<section data-section="impact" class="hidden space-y-5">
+
+  <div class="glass p-6 rounded-2xl border border-slate-800">
+    <h2 class="font-tech text-xl font-bold text-white mb-1">Industrial Safety Impact & Platform Overview</h2>
+    <p class="text-xs text-slate-400 mb-6">Addressing the root causes of occupational fatalities and injury in the skilled trades sector through AI-enabled, hands-free diagnostic wearables.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="glass-card p-4 rounded-xl">
+        <div class="text-3xl mb-2">⚠️</div>
+        <h4 class="font-tech font-bold text-white">The Problem</h4>
+        <p class="text-xs text-slate-400 mt-1 leading-relaxed">Over 14,000 industrial injuries occur annually in India's skilled trades. Invisible steam jets, toxic sewer gases, and electrical arc flashes are the leading causes — and most are detectable seconds earlier with the right sensors.</p>
+      </div>
+      <div class="glass-card p-4 rounded-xl">
+        <div class="text-3xl mb-2">🦾</div>
+        <h4 class="font-tech font-bold text-white">The Wearable Solution</h4>
+        <p class="text-xs text-slate-400 mt-1 leading-relaxed">A wrist-worn, hands-free device combining ultrasonic acoustic hiss detection (20–60 kHz), 8×8 non-contact thermal imaging, and multi-gas electrochemical sensing — fused by a TinyML edge classifier running in under 15ms.</p>
+      </div>
+      <div class="glass-card p-4 rounded-xl">
+        <div class="text-3xl mb-2">📡</div>
+        <h4 class="font-tech font-bold text-white">Enterprise Connectivity</h4>
+        <p class="text-xs text-slate-400 mt-1 leading-relaxed">Sub-GHz LoRaWAN (865–867 MHz) provides up to 3 km range — penetrating underground trench walls, basement plant rooms, and steel-framed structures where WiFi and cellular fail.</p>
+      </div>
+      <div class="glass-card p-4 rounded-xl">
+        <div class="text-3xl mb-2">💰</div>
+        <h4 class="font-tech font-bold text-white">Frugal Engineering</h4>
+        <p class="text-xs text-slate-400 mt-1 leading-relaxed">Total unit BOM under ₹3,200 ($38 USD). No cloud subscription required — offline edge inference only. Designed for mass deployment in trade apprenticeships and municipal workforces.</p>
+      </div>
+    </div>
+
+    <!-- Impact Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="glass-card p-4 rounded-xl text-center">
+        <div class="text-cyan-400 font-tech text-2xl font-bold">14ms</div>
+        <p class="text-xs text-slate-400 mt-1">On-device AI inference<br>latency (ESP32-S3)</p>
+      </div>
+      <div class="glass-card p-4 rounded-xl text-center">
+        <div class="text-emerald-400 font-tech text-2xl font-bold">97.8%</div>
+        <p class="text-xs text-slate-400 mt-1">Steam leak acoustic<br>detection accuracy</p>
+      </div>
+      <div class="glass-card p-4 rounded-xl text-center">
+        <div class="text-amber-400 font-tech text-2xl font-bold">3 km</div>
+        <p class="text-xs text-slate-400 mt-1">LoRaWAN range in<br>dense industrial zones</p>
+      </div>
+      <div class="glass-card p-4 rounded-xl text-center">
+        <div class="text-rose-400 font-tech text-2xl font-bold">16 hr</div>
+        <p class="text-xs text-slate-400 mt-1">Full-shift battery<br>runtime per charge</p>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+</main>
+
+<!-- ─── AUDIT MODAL ─────────────────────────────────────────────────────── -->
+<div id="audit-modal" class="hidden modal-backdrop">
+  <div class="glass w-full max-w-2xl rounded-2xl border border-cyan-500/40 p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <h3 class="font-tech text-lg font-bold text-white">📄 OSHA / DGMS Compliance Safety Audit Report</h3>
+      <button id="btn-close-audit" class="text-slate-400 hover:text-white text-xl font-mono">✕</button>
+    </div>
+    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 space-y-2">
+      <p><strong class="text-cyan-400">SYSTEM:</strong> AeroSentry Industrial — AI Wearable Hazard Detection Platform</p>
+      <p><strong class="text-cyan-400">STANDARD:</strong> OSHA 29 CFR 1910.146 · DGMS General Rules 1957 · ISO 45001:2018</p>
+      <p><strong class="text-cyan-400">GENERATED:</strong> <span id="audit-ts">—</span></p>
+      <hr class="border-slate-800 my-1">
+      <p><strong>Wearable Pods Online:</strong> <span id="audit-workers">4</span> / 4 (Battery avg 88%)</p>
+      <p><strong>Total Incidents Logged:</strong> <span id="audit-incidents">0</span></p>
+      <p><strong>Edge AI Model Active:</strong> Quiescent-MultiSensor-v1 (Latency 8.4ms)</p>
+      <p><strong>Acoustic Range:</strong> 20 kHz – 60 kHz (Nominal)</p>
+      <p><strong>Gas Array Status:</strong> O₂ 20.9% | H₂S &lt;1 ppm | CH₄ &lt;30 ppm (Safe)</p>
+      <p class="text-emerald-400 font-bold">STATUS: <span id="audit-status">COMPLIANT</span></p>
+    </div>
+    <div class="flex justify-end gap-2">
+      <button id="btn-close-audit-2" onclick="document.getElementById('audit-modal').classList.add('hidden')" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-tech">Close</button>
+      <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-tech font-bold text-xs">🖨️ Print / Save PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SCRIPT LOADING ORDER ────────────────────────────────────────────── -->
+<script src="js/api.js"></script>
+<script src="js/telemetry.js"></script>
+<script src="js/visualizers.js"></script>
+<script src="js/simulator.js"></script>
+<script src="js/supervisor.js"></script>
+<script src="js/copilot.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

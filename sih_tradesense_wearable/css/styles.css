@@ -1,0 +1,221 @@
+/* AeroSentry Industrial - Enterprise Industrial Safety Platform */
+/* Custom styling for dark industrial cyberpunk HUD theme */
+
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-dark: #070b12;
+  --bg-panel: #0d1520;
+  --bg-card: #111d2e;
+  --accent-cyan: #00f2fe;
+  --accent-blue: #4facfe;
+  --alert-red: #ff3366;
+  --alert-yellow: #ffb703;
+  --safe-green: #00f59b;
+  --border: rgba(255,255,255,0.07);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-dark);
+  color: #e2e8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.font-tech { font-family: 'Chakra Petch', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Cyber Grid Background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(13, 21, 32, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+.glass-card {
+  background: rgba(17, 29, 46, 0.7);
+  border: 1px solid rgba(255,255,255,0.055);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.glass-card:hover {
+  border-color: rgba(0,242,254,0.3);
+  box-shadow: 0 4px 24px rgba(0,242,254,0.06);
+}
+
+/* Glow Animations */
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 14px rgba(255,51,102,0.4), inset 0 0 10px rgba(255,51,102,0.15); border-color: rgba(255,51,102,0.7); }
+  50% { box-shadow: 0 0 32px rgba(255,51,102,0.8), inset 0 0 22px rgba(255,51,102,0.45); border-color: #ff3366; }
+}
+
+@keyframes pulse-amber {
+  0%, 100% { box-shadow: 0 0 12px rgba(255,183,3,0.3); }
+  50% { box-shadow: 0 0 24px rgba(255,183,3,0.65); }
+}
+
+@keyframes radar-spin { to { transform: rotate(360deg); } }
+@keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+@keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.hazard-pulse { animation: pulse-red 0.9s infinite; }
+.warn-pulse   { animation: pulse-amber 1.5s infinite; }
+.ping-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: ping 1s cubic-bezier(0,0,0.2,1) infinite;
+}
+
+.fade-in { animation: fade-in 0.3s ease both; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #070b12; }
+::-webkit-scrollbar-thumb { background: #1a2c42; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+
+/* Text Gradients */
+.text-cyan-grad {
+  background: linear-gradient(135deg, #00f2fe, #4facfe);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-amber-grad {
+  background: linear-gradient(135deg, #ffb703, #fb8500);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Metric Card Value */
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: color 0.4s;
+}
+
+/* Severity Colors */
+.sev-normal  { color: #00f59b; }
+.sev-warning { color: #ffb703; }
+.sev-critical { color: #ff3366; }
+
+/* Connection Status Banner */
+#conn-banner {
+  position: fixed;
+  bottom: 1rem; right: 1rem;
+  z-index: 99;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border: 1px solid;
+  transition: all 0.3s;
+}
+#conn-banner.online  { background: rgba(0,245,155,0.15); border-color: #00f59b; color: #00f59b; }
+#conn-banner.offline { background: rgba(255,183,3,0.15);  border-color: #ffb703; color: #ffb703; }
+
+/* Scanline overlay on canvas */
+.scanlines { position: relative; }
+.scanlines::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px
+  );
+  pointer-events: none; z-index: 5;
+}
+
+/* Tab active */
+.tab-active {
+  background: rgba(0,242,254,0.12) !important;
+  color: #00f2fe !important;
+  border-color: rgba(0,242,254,0.45) !important;
+}
+
+/* Worker card selected */
+.worker-selected {
+  border-color: rgba(0,242,254,0.55) !important;
+  background: rgba(0,242,254,0.06) !important;
+}
+
+/* Confidence bar fill */
+.conf-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #00f2fe, #ff3366);
+  transition: width 0.6s ease;
+}
+
+/* Map worker dots */
+.map-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 20;
+}
+.map-pin-inner {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 0.65rem;
+  font-family: 'Chakra Petch', sans-serif;
+  position: relative; cursor: pointer;
+  transition: transform 0.2s;
+}
+.map-pin-inner:hover { transform: scale(1.2); }
+.map-pin-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%; transform: translateX(-50%);
+  background: rgba(7,11,18,0.96);
+  border: 1px solid rgba(0,242,254,0.4);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.2s;
+}
+.map-pin:hover .map-pin-tooltip { opacity: 1; }
+
+/* Modal backdrop */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+
+/* Thermal canvas colorbar */
+.thermal-legend {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #0a1941, #6a1085, #c41455, #f07b1e, #fffafa);
+}
