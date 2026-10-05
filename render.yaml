@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: sih-tradesense-wearable
+    env: node
+    plan: free
+    rootDir: sih_tradesense_wearable
+    buildCommand: npm install
+    startCommand: node server.js
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
